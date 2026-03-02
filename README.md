@@ -1,12 +1,12 @@
 # claude-statusline
 
-Claude Code の statusline にモデル名・コンテキスト使用率・Usage API 利用率を表示するスクリプト。
+Claude Code の statusline にモデル名・コンテキスト使用率・Usage API 利用率をリアルタイム表示するスクリプト。Claude Code のターミナル UI を補完し、使用状況を一目で把握できます。
 
 ## 表示例
 
 ```
 * Opus 4.6    29%  ██▉░░░░░░░ 142.2K    58% ███▍│░░░░░ 2h    5% ▎│░░░░░░░░░ 6d
-[WT] my-project on git feature/auth +10 -5
+ my-project   main +10 -5
 ```
 
 ### 1行目
@@ -20,12 +20,15 @@ Claude Code の statusline にモデル名・コンテキスト使用率・Usage
 
 ### 2行目
 
-| セクション | 説明 |
-|-----------|------|
-| `[WT]` | Git Worktree 内の場合に表示 |
-| `my-project` | プロジェクト名 |
-| `git feature/auth` | 現在のブランチ |
-| `+10 -5` | 未コミットの差分（挿入/削除行数） |
+ディレクトリ名を常に表示し、git 情報があれば追加で付与します。
+
+| パターン | 表示例 | 説明 |
+|---------|--------|------|
+| 非git | ` my-project` | フォルダアイコン + ディレクトリ名 |
+| git（通常） | ` my-project  main +10 -5` | git アイコン + ディレクトリ名 + ブランチ + diff |
+| git worktree | ` my-project  feature/auth +3 -1` | worktree アイコン + ディレクトリ名 + ブランチ + diff |
+
+> アイコンは Nerd Font のグリフを使用しています。
 
 ### バー表示
 
@@ -49,12 +52,12 @@ Claude Code の statusline にモデル名・コンテキスト使用率・Usage
 - **Claude Code**（statusline 機能を使用）
 - **bun**（高解像度バー描画に必要）
 - **jq**（JSON パース）
-- **Nerd Font**（アイコン表示する場合。なくても動作可能）
+- **Nerd Font**（アイコン表示に推奨。なくても動作可能）
 
 ## インストール
 
 ```bash
-git clone <repository-url> ~/src/claude-statusline
+git clone https://github.com/wworldnine/claude-statusline.git ~/src/claude-statusline
 cd ~/src/claude-statusline
 bash install.sh
 ```
@@ -93,17 +96,24 @@ echo '{"model":{"display_name":"Opus 4.6"},"session_id":"test","cwd":"/tmp","con
 
 ```bash
 setup_icons() {
-    ICON_TERMINAL="*"        # モデル名の前
-    ICON_TREE="[WT]"         # Worktree表示
-    ICON_CONTEXT=$'\xef\x80\xad'   # コンテキスト (nf-fa-book)
-    ICON_5HR=$'\xef\x80\x97'       # 5時間枠 (nf-fa-clock_o)
-    ICON_7DAY=$'\xef\x81\xb3'      # 7日枠 (nf-fa-calendar)
+    ICON_TERMINAL="*"                    # モデル名の前
+    ICON_FOLDER=$'\xef\x81\xbb'         # ディレクトリ (nf-fa-folder)
+    ICON_GIT=$'\xee\x9c\xa5'            # git リポジトリ (nf-dev-git)
+    ICON_BRANCH=$'\xee\x82\xa0'         # ブランチ (nf-pl-branch)
+    ICON_TREE=$'\xef\x83\xa8'           # worktree (nf-fa-sitemap)
+    ICON_CONTEXT=$'\xef\x80\xad'        # コンテキスト (nf-fa-book)
+    ICON_5HR=$'\xef\x80\x97'            # 5時間枠 (nf-fa-clock_o)
+    ICON_7DAY=$'\xef\x81\xb3'           # 7日枠 (nf-fa-calendar)
 }
 ```
 
 Nerd Font を使わない場合はプレーンテキストに置き換えてください:
 
 ```bash
+ICON_FOLDER="DIR"
+ICON_GIT="git"
+ICON_BRANCH=":"
+ICON_TREE="[WT]"
 ICON_CONTEXT="CTX"
 ICON_5HR="5h"
 ICON_7DAY="7d"
@@ -158,12 +168,18 @@ NO_COLOR=1 echo '...' | bash ~/.claude/statusline-handler.sh
 ```
 claude-statusline/
 ├── README.md                # このファイル
+├── LICENSE                  # MIT License
 ├── statusline-handler.sh    # メインスクリプト
 ├── bar-renderer.ts          # 高解像度バーレンダラー（bun実行）
 └── install.sh               # インストーラー
 ```
 
-## 制限事項
+## 注意事項
 
-- **macOS 専用**: `security` コマンド（Keychain）、BSD `date`、BSD `stat` に依存しています
-- **bun 依存**: 高解像度バー表示に bun ランタイムが必要です（bun なしでもテキスト表示にフォールバック）
+- **Usage API は非公式です**: 本スクリプトが利用している Anthropic Usage API (`/api/oauth/usage`) は公式にドキュメント化されたものではありません。予告なく変更・廃止される可能性があります。
+- **macOS 専用**: `security` コマンド（Keychain）、BSD `date`、BSD `stat` に依存しています。Linux では認証方法や日付コマンドの差し替えが必要です。
+- **bun 依存**: 高解像度バー表示に bun ランタイムが必要です（bun なしでもテキスト表示にフォールバック）。
+
+## License
+
+[MIT](LICENSE)
