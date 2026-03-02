@@ -70,24 +70,15 @@ setup_colors() {
     fi
 }
 
-# プロジェクト名を parent/basename 形式でフォーマット
-# HOME直下のディレクトリは basename のみ、それ以外は親ディレクトリ名を付与
-format_project_name() {
+# 非git ディレクトリ用パスフォーマッター
+# HOME配下は ~/relative/path、HOME自体は ~、それ以外は絶対パス
+format_dir_path() {
     local dir="$1"
     [ -z "$dir" ] && return
-    local base
-    base=$(basename "$dir")
     case "$dir" in
-        "$HOME"/*)
-            local rel="${dir#$HOME/}"
-            if [[ "$rel" == */* ]]; then
-                printf '%s/%s' "$(basename "$(dirname "$dir")")" "$base"
-            else
-                printf '%s' "$base"
-            fi
-            ;;
         "$HOME") printf '~' ;;
-        *) printf '%s' "$base" ;;
+        "$HOME"/*) printf '~/%s' "${dir#$HOME/}" ;;
+        *) printf '%s' "$dir" ;;
     esac
 }
 
@@ -230,7 +221,7 @@ main() {
     model_display=$(echo "$input" | jq -r '.model.display_name // "Unknown"' 2>/dev/null)
     cwd=$(echo "$input" | jq -r '.cwd' 2>/dev/null)
     workspace_dir=$(echo "$input" | jq -r '.workspace.current_dir' 2>/dev/null)
-    project=$(format_project_name "$workspace_dir")
+    project=$(basename "$workspace_dir" 2>/dev/null)
 
     # コンテキスト使用率（Claude Code の JSON から直接取得）
     context_pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0' 2>/dev/null)
@@ -271,7 +262,7 @@ main() {
             # 親プロジェクトの名前で project を上書き
             local parent_project_root
             parent_project_root=$(dirname "$git_common_dir")
-            project=$(format_project_name "$parent_project_root")
+            project=$(basename "$parent_project_root")
         fi
     fi
 
@@ -428,8 +419,10 @@ main() {
                 "$git_stats"
         fi
     elif [ -n "$project" ]; then
-        # 非git ディレクトリ
-        printf '%s%s  %s%s' "$COLOR_BLUE" "$ICON_FOLDER" "$project" "$COLOR_DEFAULT"
+        # 非git ディレクトリ — フルパス表示
+        local dir_display
+        dir_display=$(format_dir_path "$workspace_dir")
+        printf '%s%s  %s%s' "$COLOR_BLUE" "$ICON_FOLDER" "$dir_display" "$COLOR_DEFAULT"
     fi
 }
 
