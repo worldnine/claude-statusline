@@ -43,7 +43,7 @@ setup_icons() {
     ICON_TAG=$'\xef\x80\xab'       # U+F02B nf-fa-tag (ブランチ)
     ICON_LEAF=$'\xef\x81\xac'      # U+F06C nf-fa-leaf (ワークツリー)
     ICON_CONTEXT=$'\xef\x80\xad'   # U+F02D nf-fa-book (本)
-    ICON_5HR=$'\xef\x80\x97'       # U+F017 nf-fa-clock_o (時計)
+    ICON_5HR=$'\xf3\xb1\x91\x83'   # U+F1443 nf-md-clock_time_five (5時の時計)
     ICON_7DAY=$'\xef\x81\xb3'      # U+F073 nf-fa-calendar (カレンダー)
 }
 
