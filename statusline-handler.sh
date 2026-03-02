@@ -40,8 +40,8 @@ setup_icons() {
     ICON_TERMINAL="*"
     ICON_FOLDER=$'\xef\x81\xbb'    # U+F07B nf-fa-folder (フォルダ)
     ICON_GIT=$'\xee\x9c\xa5'       # U+E725 nf-dev-git (git)
-    ICON_BRANCH=$'\xee\x82\xa0'    # U+E0A0 nf-pl-branch (ブランチ)
-    ICON_TREE=$'\xef\x83\xa8'      # U+F0E8 nf-fa-sitemap (worktree)
+    ICON_TAG=$'\xef\x80\xab'       # U+F02B nf-fa-tag (ブランチ)
+    ICON_LEAF=$'\xef\x81\xac'      # U+F06C nf-fa-leaf (ワークツリー)
     ICON_CONTEXT=$'\xef\x80\xad'   # U+F02D nf-fa-book (本)
     ICON_5HR=$'\xef\x80\x97'       # U+F017 nf-fa-clock_o (時計)
     ICON_7DAY=$'\xef\x81\xb3'      # U+F073 nf-fa-calendar (カレンダー)
@@ -61,11 +61,11 @@ setup_colors() {
     else
         COLOR_RESET=$'\033[0m'
         COLOR_DEFAULT=$'\033[39m'  # 前景色のみデフォルトに戻す（statusline環境用）
-        COLOR_BLUE=$'\033[34m'
-        COLOR_PINK=$'\033[95m'
+        COLOR_BLUE=$'\033[38;5;68m'
+        COLOR_PINK=$'\033[38;5;168m'
         COLOR_GREEN=$'\033[92m'
         COLOR_RED=$'\033[91m'
-        COLOR_BRIGHT_GREEN=$'\033[32m'
+        COLOR_BRIGHT_GREEN=$'\033[38;5;71m'
         COLOR_ORANGE=$'\033[38;5;208m'
     fi
 }
@@ -383,22 +383,27 @@ main() {
     # === 2行目: ディレクトリ名 + Git情報 ===
     if [ -n "$branch" ]; then
         # git リポジトリ内
-        local dir_icon="$ICON_GIT"
-        $is_worktree && dir_icon="$ICON_TREE"
+        local wt_indicator="" branch_color="$COLOR_PINK"
+        local branch_icon=$(printf '%s ' "$ICON_TAG")
+        if $is_worktree; then
+            wt_indicator=$(printf '%s%s  ' "$COLOR_BRIGHT_GREEN" "$ICON_LEAF")
+            branch_color="$COLOR_BRIGHT_GREEN"
+            branch_icon=""
+        fi
         if [ -n "$project" ]; then
-            printf '%s%s%s %s%s%s  %s%s%s%s' \
-                "$COLOR_PINK" "$dir_icon" "$COLOR_DEFAULT" \
-                "$COLOR_BLUE" "$project" "$COLOR_DEFAULT" \
-                "$COLOR_PINK" "$branch" "$COLOR_DEFAULT" \
+            printf '%s%s %s%s  %s%s%s%s%s%s' \
+                "$COLOR_BLUE" "$ICON_GIT" "$project" "$COLOR_DEFAULT" \
+                "$wt_indicator" "$branch_color" "$branch_icon" "$branch" "$COLOR_DEFAULT" \
                 "$git_stats"
         else
-            printf '%s%s %s%s%s' \
-                "$COLOR_PINK" "$dir_icon" "$branch" "$COLOR_DEFAULT" \
+            printf '%s%s%s %s%s%s%s' \
+                "$wt_indicator" "$branch_color" "$ICON_GIT" \
+                "$branch_icon" "$branch" "$COLOR_DEFAULT" \
                 "$git_stats"
         fi
     elif [ -n "$project" ]; then
         # 非git ディレクトリ
-        printf '%s%s %s%s' "$COLOR_BLUE" "$ICON_FOLDER" "$project" "$COLOR_DEFAULT"
+        printf '%s%s  %s%s' "$COLOR_BLUE" "$ICON_FOLDER" "$project" "$COLOR_DEFAULT"
     fi
 }
 
