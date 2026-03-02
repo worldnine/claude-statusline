@@ -57,7 +57,7 @@ Claude Code の statusline にモデル名・コンテキスト使用率・Usage
 ## インストール
 
 ```bash
-git clone https://github.com/wworldnine/claude-statusline.git ~/src/claude-statusline
+git clone https://github.com/worldnine/claude-statusline.git ~/src/claude-statusline
 cd ~/src/claude-statusline
 bash install.sh
 ```
