@@ -70,6 +70,27 @@ setup_colors() {
     fi
 }
 
+# プロジェクト名を parent/basename 形式でフォーマット
+# HOME直下のディレクトリは basename のみ、それ以外は親ディレクトリ名を付与
+format_project_name() {
+    local dir="$1"
+    [ -z "$dir" ] && return
+    local base
+    base=$(basename "$dir")
+    case "$dir" in
+        "$HOME"/*)
+            local rel="${dir#$HOME/}"
+            if [[ "$rel" == */* ]]; then
+                printf '%s/%s' "$(basename "$(dirname "$dir")")" "$base"
+            else
+                printf '%s' "$base"
+            fi
+            ;;
+        "$HOME") printf '~' ;;
+        *) printf '%s' "$base" ;;
+    esac
+}
+
 # Usage API からデータ取得
 # macOS Keychain から OAuth トークンを取得し、利用率エンドポイントを呼び出す
 fetch_usage() {
@@ -208,7 +229,8 @@ main() {
     # 入力JSONからデータ取得
     model_display=$(echo "$input" | jq -r '.model.display_name // "Unknown"' 2>/dev/null)
     cwd=$(echo "$input" | jq -r '.cwd' 2>/dev/null)
-    project=$(echo "$input" | jq -r '.workspace.current_dir' 2>/dev/null | xargs basename 2>/dev/null)
+    workspace_dir=$(echo "$input" | jq -r '.workspace.current_dir' 2>/dev/null)
+    project=$(format_project_name "$workspace_dir")
 
     # コンテキスト使用率（Claude Code の JSON から直接取得）
     context_pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0' 2>/dev/null)
@@ -246,6 +268,10 @@ main() {
         git_dir=$(cd "$cwd" 2>/dev/null && cd "$(git rev-parse --git-dir 2>/dev/null)" 2>/dev/null && pwd)
         if [ -n "$git_common_dir" ] && [ -n "$git_dir" ] && [ "$git_common_dir" != "$git_dir" ]; then
             is_worktree=true
+            # 親プロジェクトの名前で project を上書き
+            local parent_project_root
+            parent_project_root=$(dirname "$git_common_dir")
+            project=$(format_project_name "$parent_project_root")
         fi
     fi
 
