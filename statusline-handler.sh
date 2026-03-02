@@ -100,6 +100,23 @@ format_parent_path() {
     printf '%s/' "$parent"
 }
 
+# パスをターミナル幅に収まるよう左側から切り詰め
+# $1: パス文字列  $2: 最大幅（省略時は切り詰めなし）
+truncate_path() {
+    local path="$1" max_width="$2"
+    [ -z "$max_width" ] || [ "$max_width" -le 0 ] 2>/dev/null && { printf '%s' "$path"; return; }
+    local len=${#path}
+    [ "$len" -le "$max_width" ] && { printf '%s' "$path"; return; }
+    # 最大幅から "…/" の2文字分を引いた長さで右側を取得
+    local keep=$((max_width - 2))
+    local suffix="${path:$((len - keep))}"
+    # / 境界に揃える
+    case "$suffix" in
+        */*) suffix="${suffix#*/}"; printf '…/%s' "$suffix" ;;
+        *) printf '…%s' "$suffix" ;;
+    esac
+}
+
 # Usage API からデータ取得
 # macOS Keychain から OAuth トークンを取得し、利用率エンドポイントを呼び出す
 fetch_usage() {
@@ -226,6 +243,9 @@ main() {
     setup_icons
     setup_colors
 
+    local term_width
+    term_width=$(tput cols 2>/dev/null || echo "80")
+
     input=$(cat)
 
     # デバッグモード
@@ -240,7 +260,7 @@ main() {
     cwd=$(echo "$input" | jq -r '.cwd' 2>/dev/null)
     workspace_dir=$(echo "$input" | jq -r '.workspace.current_dir' 2>/dev/null)
     project=$(basename "$workspace_dir" 2>/dev/null)
-    project_dir="$workspace_dir"  # 親パス表示用（WT時は親プロジェクトで上書き）
+    project_dir="$workspace_dir"
 
     # コンテキスト使用率（Claude Code の JSON から直接取得）
     context_pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0' 2>/dev/null)
@@ -278,11 +298,6 @@ main() {
         git_dir=$(cd "$cwd" 2>/dev/null && cd "$(git rev-parse --git-dir 2>/dev/null)" 2>/dev/null && pwd)
         if [ -n "$git_common_dir" ] && [ -n "$git_dir" ] && [ "$git_common_dir" != "$git_dir" ]; then
             is_worktree=true
-            # 親プロジェクトの名前で project を上書き
-            local parent_project_root
-            parent_project_root=$(dirname "$git_common_dir")
-            project=$(basename "$parent_project_root")
-            project_dir="$parent_project_root"
         fi
     fi
 
@@ -417,35 +432,35 @@ main() {
     # 1行目出力
     printf "%s\n" "$line1"
 
-    # === 2行目: ディレクトリ名 + Git情報 ===
+    # === 2行目: Git情報（git リポジトリの場合のみ） ===
     if [ -n "$branch" ]; then
-        # git リポジトリ内
-        local wt_indicator="" branch_color="$COLOR_PINK"
-        local branch_icon=$(printf '%s  ' "$ICON_TAG")
         if $is_worktree; then
-            wt_indicator=$(printf '%s%s  ' "$COLOR_BRIGHT_GREEN" "$ICON_LEAF")
-            branch_color="$COLOR_BRIGHT_GREEN"
-            branch_icon=""
-        fi
-        if [ -n "$project" ]; then
-            local parent_prefix
-            parent_prefix=$(format_parent_path "$project_dir")
-            printf '%s%s %s%s%s%s%s  %s%s%s%s%s%s' \
+            # WT: GIT + BLUE(リポ名) + LEAF + GREEN(ブランチ) + stats
+            local repo_dir repo_name
+            repo_dir=$(cd "$git_common_dir/.." 2>/dev/null && pwd)
+            repo_name=$(basename "$repo_dir")
+            printf '%s%s %s%s  %s%s  %s%s%s\n' \
                 "$COLOR_BLUE" "$ICON_GIT" \
-                "$COLOR_DIM" "$parent_prefix" "$COLOR_BLUE" "$project" "$COLOR_DEFAULT" \
-                "$wt_indicator" "$branch_color" "$branch_icon" "$branch" "$COLOR_DEFAULT" \
+                "$repo_name" "$COLOR_DEFAULT" \
+                "$COLOR_BRIGHT_GREEN" "$ICON_LEAF" \
+                "$branch" "$COLOR_DEFAULT" \
                 "$git_stats"
         else
-            printf '%s%s%s %s%s%s%s' \
-                "$wt_indicator" "$branch_color" "$ICON_GIT" \
-                "$branch_icon" "$branch" "$COLOR_DEFAULT" \
+            # 通常 git: GIT + BLUE(プロジェクト名) + TAG + PINK(ブランチ) + stats
+            printf '%s%s %s%s  %s%s  %s%s%s\n' \
+                "$COLOR_BLUE" "$ICON_GIT" \
+                "$project" "$COLOR_DEFAULT" \
+                "$COLOR_PINK" "$ICON_TAG" \
+                "$branch" "$COLOR_DEFAULT" \
                 "$git_stats"
         fi
-    elif [ -n "$project" ]; then
-        # 非git ディレクトリ — フルパス表示
-        local dir_display
-        dir_display=$(format_dir_path "$workspace_dir")
-        printf '%s%s  %s%s' "$COLOR_BLUE" "$ICON_FOLDER" "$dir_display" "$COLOR_DEFAULT"
+    fi
+
+    # === 最終行: フルパス（DIM、フォルダアイコン付き、幅制限） ===
+    if [ -n "$project_dir" ]; then
+        local path_display
+        path_display=$(truncate_path "$(format_dir_path "$project_dir")" "$((term_width - 3))")
+        printf '%s%s  %s%s' "$COLOR_DIM" "$ICON_FOLDER" "$path_display" "$COLOR_DEFAULT"
     fi
 }
 
