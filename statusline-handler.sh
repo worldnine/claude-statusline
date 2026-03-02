@@ -58,6 +58,7 @@ setup_colors() {
         COLOR_RED=""
         COLOR_BRIGHT_GREEN=""
         COLOR_ORANGE=""
+        COLOR_DIM=""
     else
         COLOR_RESET=$'\033[0m'
         COLOR_DEFAULT=$'\033[39m'  # 前景色のみデフォルトに戻す（statusline環境用）
@@ -67,10 +68,11 @@ setup_colors() {
         COLOR_RED=$'\033[38;5;167m'
         COLOR_BRIGHT_GREEN=$'\033[38;5;71m'
         COLOR_ORANGE=$'\033[38;5;208m'
+        COLOR_DIM=$'\033[38;5;242m'
     fi
 }
 
-# 非git ディレクトリ用パスフォーマッター
+# ディレクトリパスフォーマッター
 # HOME配下は ~/relative/path、HOME自体は ~、それ以外は絶対パス
 format_dir_path() {
     local dir="$1"
@@ -80,6 +82,22 @@ format_dir_path() {
         "$HOME"/*) printf '~/%s' "${dir#$HOME/}" ;;
         *) printf '%s' "$dir" ;;
     esac
+}
+
+# 親パス部分のみを返す（basename を除いた prefix）
+# 例: ~/src/claude-statusline → "~/src/"、~/project → ""、/tmp/test → "/tmp/"
+format_parent_path() {
+    local dir="$1"
+    [ -z "$dir" ] && return
+    local formatted
+    case "$dir" in
+        "$HOME") return ;;
+        "$HOME"/*) formatted="~/${dir#$HOME/}" ;;
+        *) formatted="$dir" ;;
+    esac
+    local parent="${formatted%/*}"
+    [ "$parent" = "$formatted" ] && return  # スラッシュなし = 親なし
+    printf '%s/' "$parent"
 }
 
 # Usage API からデータ取得
@@ -222,6 +240,7 @@ main() {
     cwd=$(echo "$input" | jq -r '.cwd' 2>/dev/null)
     workspace_dir=$(echo "$input" | jq -r '.workspace.current_dir' 2>/dev/null)
     project=$(basename "$workspace_dir" 2>/dev/null)
+    project_dir="$workspace_dir"  # 親パス表示用（WT時は親プロジェクトで上書き）
 
     # コンテキスト使用率（Claude Code の JSON から直接取得）
     context_pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0' 2>/dev/null)
@@ -263,6 +282,7 @@ main() {
             local parent_project_root
             parent_project_root=$(dirname "$git_common_dir")
             project=$(basename "$parent_project_root")
+            project_dir="$parent_project_root"
         fi
     fi
 
@@ -408,8 +428,11 @@ main() {
             branch_icon=""
         fi
         if [ -n "$project" ]; then
-            printf '%s%s %s%s  %s%s%s%s%s%s' \
-                "$COLOR_BLUE" "$ICON_GIT" "$project" "$COLOR_DEFAULT" \
+            local parent_prefix
+            parent_prefix=$(format_parent_path "$project_dir")
+            printf '%s%s %s%s%s%s%s  %s%s%s%s%s%s' \
+                "$COLOR_BLUE" "$ICON_GIT" \
+                "$COLOR_DIM" "$parent_prefix" "$COLOR_BLUE" "$project" "$COLOR_DEFAULT" \
                 "$wt_indicator" "$branch_color" "$branch_icon" "$branch" "$COLOR_DEFAULT" \
                 "$git_stats"
         else
