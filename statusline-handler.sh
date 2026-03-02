@@ -386,14 +386,14 @@ main() {
         local dir_icon="$ICON_GIT"
         $is_worktree && dir_icon="$ICON_TREE"
         if [ -n "$project" ]; then
-            printf '%s%s%s %s%s%s  %s%s %s%s%s' \
+            printf '%s%s%s %s%s%s  %s%s%s%s' \
                 "$COLOR_PINK" "$dir_icon" "$COLOR_DEFAULT" \
                 "$COLOR_BLUE" "$project" "$COLOR_DEFAULT" \
-                "$COLOR_PINK" "$ICON_BRANCH" "$branch" "$COLOR_DEFAULT" \
+                "$COLOR_PINK" "$branch" "$COLOR_DEFAULT" \
                 "$git_stats"
         else
-            printf '%s%s %s %s%s%s' \
-                "$COLOR_PINK" "$dir_icon" "$ICON_BRANCH" "$branch" "$COLOR_DEFAULT" \
+            printf '%s%s %s%s%s' \
+                "$COLOR_PINK" "$dir_icon" "$branch" "$COLOR_DEFAULT" \
                 "$git_stats"
         fi
     elif [ -n "$project" ]; then
