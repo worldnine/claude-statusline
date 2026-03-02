@@ -63,8 +63,8 @@ setup_colors() {
         COLOR_DEFAULT=$'\033[39m'  # 前景色のみデフォルトに戻す（statusline環境用）
         COLOR_BLUE=$'\033[38;5;68m'
         COLOR_PINK=$'\033[38;5;168m'
-        COLOR_GREEN=$'\033[92m'
-        COLOR_RED=$'\033[91m'
+        COLOR_GREEN=$'\033[38;5;71m'
+        COLOR_RED=$'\033[38;5;167m'
         COLOR_BRIGHT_GREEN=$'\033[38;5;71m'
         COLOR_ORANGE=$'\033[38;5;208m'
     fi
@@ -384,7 +384,7 @@ main() {
     if [ -n "$branch" ]; then
         # git リポジトリ内
         local wt_indicator="" branch_color="$COLOR_PINK"
-        local branch_icon=$(printf '%s ' "$ICON_TAG")
+        local branch_icon=$(printf '%s  ' "$ICON_TAG")
         if $is_worktree; then
             wt_indicator=$(printf '%s%s  ' "$COLOR_BRIGHT_GREEN" "$ICON_LEAF")
             branch_color="$COLOR_BRIGHT_GREEN"
