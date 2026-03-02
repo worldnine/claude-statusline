@@ -259,7 +259,19 @@ main() {
     model_display=$(echo "$input" | jq -r '.model.display_name // "Unknown"' 2>/dev/null)
     cwd=$(echo "$input" | jq -r '.cwd' 2>/dev/null)
     workspace_dir=$(echo "$input" | jq -r '.workspace.current_dir' 2>/dev/null)
-    project=$(basename "$workspace_dir" 2>/dev/null)
+
+    # .git ガード: cwd が .git ディレクトリを指す場合は親に補正
+    case "$workspace_dir" in
+        */.git) workspace_dir="${workspace_dir%/.git}" ;;
+    esac
+
+    # プロジェクト名: project_dir（起動ディレクトリ）を優先、なければ workspace_dir
+    local startup_dir
+    startup_dir=$(echo "$input" | jq -r '.workspace.project_dir // empty' 2>/dev/null)
+    case "$startup_dir" in
+        */.git) startup_dir="${startup_dir%/.git}" ;;
+    esac
+    project=$(basename "${startup_dir:-$workspace_dir}" 2>/dev/null)
     project_dir="$workspace_dir"
 
     # コンテキスト使用率（Claude Code の JSON から直接取得）
